@@ -5,8 +5,6 @@
 Осредение make_average
 Для обработки boreali есть функции boreali_processing и boreali_osw_processing соответственно
 За подробностями см. описания функций
-
-p.s заранее извиняюсь за хардкод
 """
 import os
 from nansat import Nansat, Domain, mosaic
