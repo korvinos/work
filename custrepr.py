@@ -233,7 +233,7 @@ def boreali_osw_processing(obj, final_path):
     """
     Мой код в данной функции основан на tutorial.py который я нашел в репозитории boreali.
 
-    :param obj: Nansat объект
+    :param obj: путь до изображения
     :param final_path: Путь для сохранения файлов
     :return:
     """
@@ -332,4 +332,11 @@ boreali_osw_processing('/home/artemm/michigan/average_data/oct/A2014281287.L2_LA
 
 boreali_processing('/home/artemm/michigan/average_data/may/A2014135141.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc', '/home/artemm/michigan/may/')
 boreali_osw_processing('/home/artemm/michigan/average_data/may/A2014135141.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc', '/home/artemm/michigan/may/')
-'''     # Сценарии
+
+
+path = '/nfs0/data_ocolor/michigan/data/2014/may/'
+data = get_data_list(path)
+for element in data:
+    boreali_processing(path + element, '/home/artemm/michigan/boreali/may/')
+    boreali_osw_processing(path + element, '/home/artemm/michigan/boreali_osw/may/')
+    '''  # Сценарии
