@@ -187,8 +187,7 @@ def boreali_processing(obj, final_path):
     wavelen = [412, 443, 469, 488,
                531, 547, 555,
                645, 667, 678]
-    albedo_type, theta = 0, 0
-    h = 50  # Глубина, используется только для оптически мелких вод
+    theta = 0
     cpa_limits = [0.01, 2,
                  0.01, 1,
                  0.01, 1, 10]
@@ -201,14 +200,6 @@ def boreali_processing(obj, final_path):
         legendVals.append('%5.2f mg m-3' % chl)
         c = lm.get_c_deep(cpa_limits, model, [rrs], [theta], 4)[1]
         print 'chl=%5.2f, tsm=%5.2f, doc=%5.2f, rmse=%5.2f' % tuple(c)
-        '''
-        plt.legend(legendVals)
-        plt.xlabel('wavelength, nm')
-        plt.ylabel('Rrsw, sr-1')
-        plt.title('Rrsw spectra for various chl values')
-        plt.savefig('test_rrsw.png')
-        plt.close()
-        '''
 
     # raise
     wavelen_nansat = [412, 443, 469, 488,
@@ -226,7 +217,6 @@ def boreali_processing(obj, final_path):
         custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen_nansat[index]),
                                             'units': 'sr-1',
                                             'wavelength': wavelen_nansat[index]})
-    #custom_n = create_mask_beta_mod(custom_n)
     cpa = b.process(custom_n, cpa_limits, threads=4)
 
     custom_n.add_band(array=cpa[0], parameters={'name': 'chl', 'long_name': 'Chlorophyl-a', 'units': 'mg m-3'})
