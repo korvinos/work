@@ -252,14 +252,15 @@ def boreali_osw_processing(obj, final_path):
     dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     n.reproject(dom)
     dep = numpy.copy(n[2])
-    dep[:, :] = h
+    dep[:, :] = numpy.float32(h)
     theta = numpy.zeros([200, 300])
 
     custom_n = Nansat(domain=n)
     band_rrs_numbers = list(map(lambda x: n._get_band_number('Rrs_' + str(x)),
                                 wavelen))   # Получаем список номеров бандов в которых лежат значения Rrs
 
-
+    # osw считает по значниям Rrs ?
+    # для корректной работы складываем в custom_n значения и Rrs и Rrsw
     for index in range(0, len(wavelen)):
         rrsw = n[band_rrs_numbers[index]] / (0.52 + 1.7 * n[band_rrs_numbers[index]])   # Пересчитываем Rrs в Rrsw
         custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),  # Складываем в новый объект
