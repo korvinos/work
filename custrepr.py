@@ -228,6 +228,7 @@ def boreali_processing(obj, final_path):
                    mask_array=cpa[4],
                    mask_lut={2: [128, 128, 128]})
 
+
 def boreali_osw_processing(obj, final_path):
     """
     Мой код в данной функции основан на tutorial.py который я нашел в репозитории boreali.
@@ -324,7 +325,7 @@ for month in months:
     for element in data:
         make_reproject(root + month, repr + month, element)
     make_average(repr + month, aver + month)
-    #name = get_data_list(aver)cd a
+    #name = get_data_list(aver)
 boreali_processing('/home/artemm/michigan/average_data/oct/A2014281287.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc', '/home/artemm/michigan/oct/')
 boreali_osw_processing('/home/artemm/michigan/average_data/oct/A2014281287.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc', '/home/artemm/michigan/oct/')
 
