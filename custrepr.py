@@ -187,14 +187,16 @@ def boreali_processing(obj, final_path):
     wavelen = [412, 443, 469, 488,
                531, 547, 555,
                645, 667, 678]
-    theta = 0
     cpa_limits = [0.01, 2,
                  0.01, 1,
                  0.01, 1, 10]
     b = Boreali('michigan', wavelen)
-    model = b.get_homodel()
 
     n = Nansat(obj)
+    dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
+    n.reproject(dom)
+    theta = numpy.zeros([200, 300])
+
     custom_n = Nansat(domain=n)
     band_rrs_numbers = list(map(lambda x: n._get_band_number('Rrs_' + str(x)),
                                 wavelen))
@@ -205,7 +207,7 @@ def boreali_processing(obj, final_path):
         custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),
                                             'units': 'sr-1',
                                             'wavelength': wavelen[index]})
-    cpa = b.process(custom_n, cpa_limits, threads=4)
+    cpa = b.process(custom_n, cpa_limits, theta=theta, threads=4)
 
     custom_n.add_band(array=cpa[0], parameters={'name': 'chl', 'long_name': 'Chlorophyl-a', 'units': 'mg m-3'})
     custom_n.add_band(array=cpa[1], parameters={'name': 'tsm', 'long_name': 'Total suspended matter', 'units': 'g m-3'})
@@ -249,9 +251,8 @@ def boreali_osw_processing(obj, final_path):
     dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     n.reproject(dom)
     dep = numpy.copy(n[2])
-    dep[:, :] = numpy.float32(h)
-    theta = dep = numpy.copy(n[2])
-    theta[:, :] = 0
+    dep[:, :] = h
+    theta = numpy.zeros([200, 300])
 
     custom_n = Nansat(domain=n)
     band_rrs_numbers = list(map(lambda x: n._get_band_number('Rrs_' + str(x)),
