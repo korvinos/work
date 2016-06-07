@@ -226,7 +226,6 @@ def boreali_processing(obj, final_path):
                    mask_array=cpa[4],
                    mask_lut={2: [128, 128, 128]})
 
-
 def boreali_osw_processing(obj, final_path):
     """
     Мой код в данной функции основан на tutorial.py который я нашел в репозитории boreali.
@@ -239,8 +238,6 @@ def boreali_osw_processing(obj, final_path):
     wavelen = [412, 443, 469, 488,
                531, 547, 555,
                645, 667, 678]
-    albedo_type = 0
-    theta = 0
     h = 50  # Средняя глубина исследуемого района
 
     cpa_limits = [0.01, 2,
@@ -248,21 +245,29 @@ def boreali_osw_processing(obj, final_path):
                  0.01, 1, 10]
 
     b = Boreali('michigan', wavelen)
-    model = b.get_homodel()
-    albedo = b.get_albedo([albedo_type])[0]
-
     n = Nansat(obj)
+    dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
+    n.reproject(dom)
+    dep = numpy.copy(n[2])
+    dep[:, :] = numpy.float32(h)
+    theta = dep = numpy.copy(n[2])
+    theta[:, :] = 0
+
     custom_n = Nansat(domain=n)
     band_rrs_numbers = list(map(lambda x: n._get_band_number('Rrs_' + str(x)),
-                                wavelen)) # Получаем список номеров бандов в которых лежат значения Rrs
+                                wavelen))   # Получаем список номеров бандов в которых лежат значения Rrs
 
 
     for index in range(0, len(wavelen)):
         rrsw = n[band_rrs_numbers[index]] / (0.52 + 1.7 * n[band_rrs_numbers[index]])   # Пересчитываем Rrs в Rrsw
-        custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),   # Складываем в новый объект
+        custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),  # Складываем в новый объект
                                             'units': 'sr-1',
                                             'wavelength': wavelen[index]})
-    cpa = b.process(custom_n, cpa_limits, threads=4)
+        custom_n.add_band(n[band_rrs_numbers[index]], parameters={'name': 'Rrs_' + str(wavelen[index]),   # Складываем в новый объект
+                                                                    'units': 'sr-1',
+                                                                    'wavelength': wavelen[index]})
+
+    cpa = b.process(custom_n, cpa_limits, depth=dep, theta=theta, threads=4)
 
     custom_n.add_band(array=cpa[0], parameters={'name': 'chl',
                                                 'long_name': 'Chlorophyl-a',
