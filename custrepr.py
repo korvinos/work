@@ -193,30 +193,18 @@ def boreali_processing(obj, final_path):
                  0.01, 1, 10]
     b = Boreali('michigan', wavelen)
     model = b.get_homodel()
-    chls = [0.01, 0.05, 0.1, 0.5, 1, 5]
-    legendVals = []
-    for chl in chls:
-        rrs = lm.get_rrsw_deep(model, [chl, 0.2, 0.01], theta, len(wavelen))[1]
-        legendVals.append('%5.2f mg m-3' % chl)
-        c = lm.get_c_deep(cpa_limits, model, [rrs], [theta], 4)[1]
-        print 'chl=%5.2f, tsm=%5.2f, doc=%5.2f, rmse=%5.2f' % tuple(c)
-
-    # raise
-    wavelen_nansat = [412, 443, 469, 488,
-                      531, 547, 555,
-                      645, 667, 678]
 
     n = Nansat(obj)
     custom_n = Nansat(domain=n)
     band_rrs_numbers = list(map(lambda x: n._get_band_number('Rrs_' + str(x)),
-                                wavelen_nansat))
+                                wavelen))
 
-    for index in range(0, len(wavelen_nansat)):
+    for index in range(0, len(wavelen)):
         # Преобразуем в Rrsw
         rrsw = n[band_rrs_numbers[index]] / (0.52 + 1.7 * n[band_rrs_numbers[index]])
-        custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen_nansat[index]),
+        custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),
                                             'units': 'sr-1',
-                                            'wavelength': wavelen_nansat[index]})
+                                            'wavelength': wavelen[index]})
     cpa = b.process(custom_n, cpa_limits, threads=4)
 
     custom_n.add_band(array=cpa[0], parameters={'name': 'chl', 'long_name': 'Chlorophyl-a', 'units': 'mg m-3'})
@@ -254,36 +242,26 @@ def boreali_osw_processing(obj, final_path):
     albedo_type = 0
     theta = 0
     h = 50  # Средняя глубина исследуемого района
+
     cpa_limits = [0.01, 2,
                  0.01, 1,
                  0.01, 1, 10]
+
     b = Boreali('michigan', wavelen)
     model = b.get_homodel()
     albedo = b.get_albedo([albedo_type])[0]
-    chls = [0.01, 0.05, 0.1, 0.5, 1, 5]
-    legendVals = []
-    for chl in chls:
-        rrs = lm.get_rrsw_shal(model, [chl, 0.2, 0.01], theta, h, albedo, len(wavelen))[1]
-        plt.plot(wavelen, rrs, '.-')
-        legendVals.append('%5.2f mg m-3' % chl)
-        c = lm.get_c_shal(cpa_limits, model, [rrs], [theta], [h], [albedo], 4)[1]
-        print 'chl=%5.2f, tsm=%5.2f, doc=%5.2f, rmse=%5.2f' % tuple(c)
-
-    wavelen_nansat = [412, 443, 469, 488,
-                      531, 547, 555,
-                      645, 667, 678]
 
     n = Nansat(obj)
     custom_n = Nansat(domain=n)
     band_rrs_numbers = list(map(lambda x: n._get_band_number('Rrs_' + str(x)),
-                                wavelen_nansat)) # Получаем список номеров бандов в которых лежат значения Rrs
+                                wavelen)) # Получаем список номеров бандов в которых лежат значения Rrs
 
 
-    for index in range(0, len(wavelen_nansat)):
+    for index in range(0, len(wavelen)):
         rrsw = n[band_rrs_numbers[index]] / (0.52 + 1.7 * n[band_rrs_numbers[index]])   # Пересчитываем Rrs в Rrsw
-        custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen_nansat[index]),   # Складываем в новый объект
+        custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),   # Складываем в новый объект
                                             'units': 'sr-1',
-                                            'wavelength': wavelen_nansat[index]})
+                                            'wavelength': wavelen[index]})
     cpa = b.process(custom_n, cpa_limits, threads=4)
 
     custom_n.add_band(array=cpa[0], parameters={'name': 'chl',
