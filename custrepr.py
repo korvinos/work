@@ -149,8 +149,10 @@ def make_reproject(path, final_path, file_name, show='off'):
     """
     print path + file_name
     nansat_obj = Nansat(path + file_name)
-    dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.20 45.10 -86.10 45.20 -ts 300 300')  #  Для маленького конечного куска
-    #dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')     #   Для всего района
+    #  Для маленького конечного куска
+    dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.20 45.10 -86.10 45.20 -ts 300 300')
+    #   Для всего района
+    #dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     nansat_obj.reproject(dom)
     nansat_obj = create_mask(nansat_obj)
 
