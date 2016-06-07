@@ -195,16 +195,10 @@ def boreali_processing(obj, final_path):
     chls = [0.01, 0.05, 0.1, 0.5, 1, 5]
     legendVals = []
     for chl in chls:
-        # call lm.get_rrsw to calculate Rrs from input concentrations
         rrs = lm.get_rrsw_deep(model, [chl, 0.2, 0.01], theta, len(wavelen))[1]
-        # plot R vs. wavelength
-        # add chl concentration to legends
         legendVals.append('%5.2f mg m-3' % chl)
-
-        # retrieve concentration vector from the last Rrsw
         c = lm.get_c_deep(cpa_limits, model, [rrs], [theta], 4)[1]
         print 'chl=%5.2f, tsm=%5.2f, doc=%5.2f, rmse=%5.2f' % tuple(c)
-    # add legend, lables, title and save the plot to PNG file
         '''
         plt.legend(legendVals)
         plt.xlabel('wavelength, nm')
