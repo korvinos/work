@@ -62,7 +62,7 @@ def create_mask_beta(obj, show='off'):
     return obj
 
 
-def create_mask(obj, show='off'):
+def create_mask(obj, show='off', bad_val_mark=0.0):
 
     """
     Маска, в которой все элементы котоые в исходном файле помечены как no data, т.е. значениями -0.015534, помечаются
@@ -73,15 +73,16 @@ def create_mask(obj, show='off'):
         3. Новая маска добавляется в исходный объект
     :param obj: Nansat объект
     :param show: Флаг для отрисовки маски. По умолчанию 'off', чтобы включить show='on'
+    :param bad_val_mark: Значения маркера для плихих начений. По умолчанию 0.0 ~ no_data
     :return: Nansat объект с добавленным в него бандом 'mask', где: 64.0 - хорошие значения (не равные -0.015534),
-    а 0.0 - плохие значения (т.е. равные -0.015534)
+    а bad_val_mark - плохие значения (т.е. равные -0.015534)
     """
 
     mask = numpy.copy(obj[2])
     for line in range(0, len(mask)):
         for row in range(0, len(mask[0])):
             if mask[line][row] == numpy.float32(-0.015534):
-                mask[line][row] = 0
+                mask[line][row] = bad_val_mark
             else:
                 mask[line][row] = 64.0
 
@@ -207,7 +208,8 @@ def boreali_processing(obj, final_path):
         custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),
                                             'units': 'sr-1',
                                             'wavelength': wavelen[index]})
-    cpa = b.process(custom_n, cpa_limits, theta=theta, threads=4)
+    custom_n = create_mask(custom_n, bad_val_mark=2.0)
+    cpa = b.process(custom_n, cpa_limits, mask=custom_n['mask'], theta=theta, threads=4)
 
     custom_n.add_band(array=cpa[0], parameters={'name': 'chl', 'long_name': 'Chlorophyl-a', 'units': 'mg m-3'})
     custom_n.add_band(array=cpa[1], parameters={'name': 'tsm', 'long_name': 'Total suspended matter', 'units': 'g m-3'})
@@ -232,11 +234,15 @@ def boreali_processing(obj, final_path):
 def boreali_osw_processing(obj, final_path):
     """
     Мой код в данной функции основан на tutorial.py который я нашел в репозитории boreali.
-
     :param obj: путь до изображения
     :param final_path: Путь для сохранения файлов
     :return:
     """
+    '''
+    Данные для тестирвоания
+    obj = '/home/artemm/Documents/michigan/average_data/2014/oct/A2014295301.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc'
+    path = '/home/artemm/Documents/work/'
+    '''
     print obj, final_path
     wavelen = [412, 443, 469, 488,
                531, 547, 555,
@@ -251,6 +257,7 @@ def boreali_osw_processing(obj, final_path):
     n = Nansat(obj)
     dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     n.reproject(dom)
+
     dep = numpy.copy(n[2])
     dep[:, :] = numpy.float32(h)
     theta = numpy.zeros([200, 300])
@@ -263,14 +270,16 @@ def boreali_osw_processing(obj, final_path):
     # для корректной работы складываем в custom_n значения и Rrs и Rrsw
     for index in range(0, len(wavelen)):
         rrsw = n[band_rrs_numbers[index]] / (0.52 + 1.7 * n[band_rrs_numbers[index]])   # Пересчитываем Rrs в Rrsw
-        custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),  # Складываем в новый объект
+        custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),  # Складываем в новый объект Rrsw
                                             'units': 'sr-1',
                                             'wavelength': wavelen[index]})
-        custom_n.add_band(n[band_rrs_numbers[index]], parameters={'name': 'Rrs_' + str(wavelen[index]),   # Складываем в новый объект
+        # Складываем в новый объект значения Rrs
+        custom_n.add_band(n[band_rrs_numbers[index]], parameters={'name': 'Rrs_' + str(wavelen[index]),
                                                                     'units': 'sr-1',
                                                                     'wavelength': wavelen[index]})
 
-    cpa = b.process(custom_n, cpa_limits, depth=dep, theta=theta, threads=4)
+    custom_n = create_mask(custom_n, bad_val_mark=2.0)
+    cpa = b.process(custom_n, cpa_limits,  mask=custom_n['mask'], depth=dep, theta=theta, threads=4)
 
     custom_n.add_band(array=cpa[0], parameters={'name': 'chl',
                                                 'long_name': 'Chlorophyl-a',
@@ -327,17 +336,23 @@ for month in months:
         make_reproject(root + month, repr + month, element)
     make_average(repr + month, aver + month)
     #name = get_data_list(aver)
-boreali_processing('/home/artemm/michigan/average_data/oct/A2014281287.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc', '/home/artemm/michigan/oct/')
-boreali_osw_processing('/home/artemm/michigan/average_data/oct/A2014281287.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc', '/home/artemm/michigan/oct/')
+boreali_processing('/home/artemm/michigan/average_data/oct/A2014281287.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc',
+'/home/artemm/michigan/oct/')
+boreali_osw_processing('/home/artemm/michigan/average_data/oct/A2014281287.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc',
+'/home/artemm/michigan/oct/')
 
 
-boreali_processing('/home/artemm/michigan/average_data/may/A2014135141.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc', '/home/artemm/michigan/may/')
-boreali_osw_processing('/home/artemm/michigan/average_data/may/A2014135141.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc', '/home/artemm/michigan/may/')
+boreali_processing('/home/artemm/michigan/average_data/may/A2014135141.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc',
+'/home/artemm/michigan/may/')
+boreali_osw_processing('/home/artemm/michigan/average_data/may/A2014135141.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc',
+'/home/artemm/michigan/may/')
 
 
-path = '/nfs0/data_ocolor/michigan/data/2014/may/'
-data = get_data_list(path)
-for element in data:
-    boreali_processing(path + element, '/home/artemm/michigan/boreali/may/')
-    boreali_osw_processing(path + element, '/home/artemm/michigan/boreali_osw/may/')
-    '''  # Сценарии
+'''  # Сценарии
+months = ['may/', 'jun/', 'sep/', 'oct/']
+for month in months:
+    path = '/nfs0/data_ocolor/michigan/data/2014/' + month
+    data = get_data_list(path)
+    for element in data:
+        boreali_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_data/' + month)
+        boreali_osw_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_osw_data/' + month)
