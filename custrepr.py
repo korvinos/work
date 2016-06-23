@@ -14,6 +14,18 @@ from boreali import Boreali, lm
 import scipy
 
 
+def get_deph():
+    data = Nansat('/home/artemm/Desktop/michigan_lld.grd')
+    dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
+    data.reproject(dom)
+
+    h = numpy.copy(data[1])
+    h[numpy.where(h > numpy.float32(0.0))] = numpy.nan
+    h[numpy.where(h < numpy.float32(0.0))] *= numpy.float32(-1)
+
+    return h
+
+
 def create_mask_beta(obj, show='off'):
 
     """
@@ -35,9 +47,8 @@ def create_mask_beta(obj, show='off'):
     каналах), а 0.0 - плохие значения (т.е. хотя бы один канал имел Rrs < 0)
     """
 
-    size = obj[2].shape
-    mask_bool = numpy.zeros((size[0], size[1])) == 0
-    mask = numpy.zeros((size[0], size[1]))
+    mask_bool = numpy.zeros_like(obj[2]) == 0
+    mask = numpy.zeros_like(obj[2])
     count_bands = len(obj.bands())
 
     for band in range(1, count_bands):
@@ -72,23 +83,21 @@ def create_mask(obj, show='off', bad_val_mark=0.0):
         (0.0), а все остальные на флаг хороших (64.0)
         3. Новая маска добавляется в исходный объект
     :param obj: Nansat объект
+    :param ground: numpy.array содержащий значения глубин
     :param show: Флаг для отрисовки маски. По умолчанию 'off', чтобы включить show='on'
     :param bad_val_mark: Значения маркера для плихих начений. По умолчанию 0.0 ~ no_data
     :return: Nansat объект с добавленным в него бандом 'mask', где: 64.0 - хорошие значения (не равные -0.015534),
     а bad_val_mark - плохие значения (т.е. равные -0.015534)
     """
-
+    ground = get_deph()
     mask = numpy.copy(obj[2])
-    for line in range(0, len(mask)):
-        for row in range(0, len(mask[0])):
-            if mask[line][row] == numpy.float32(-0.015534):
-                mask[line][row] = bad_val_mark
-            else:
-                mask[line][row] = 64.0
-
+    mask[numpy.where(ground == numpy.nan)] = numpy.float32(2.0)
+    mask[numpy.where(mask != numpy.float32(-0.015534))] = 64.0
+    mask[numpy.where(mask == numpy.float32(-0.015534))] = bad_val_mark
     obj.add_band(array=mask, parameters={'name': 'mask'})
 
-    print 'The new \'mask\' was successfully added to Nansat object as band: ' + str(obj._get_band_number('mask'))
+    print 'The new \'mask\' was successfully added to Nansat object as band: ' \
+          + str(obj._get_band_number('mask'))
 
     if show == 'on':
         plt.imshow(obj[obj._get_band_number('mask')])
@@ -151,9 +160,9 @@ def make_reproject(path, final_path, file_name, show='off'):
     print path + file_name
     nansat_obj = Nansat(path + file_name)
     #  Для маленького конечного куска
-    dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.20 45.10 -86.10 45.20 -ts 300 300')
+    #dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.20 45.10 -86.10 45.20 -ts 300 300')
     #   Для всего района
-    #dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
+    dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     nansat_obj.reproject(dom)
     nansat_obj = create_mask(nansat_obj)
 
@@ -184,7 +193,7 @@ def make_average(path, final_path, period=7):
         mosaic_obj.export(final_path + week + '.mosaic.nc')
 
 
-def boreali_processing(obj, final_path):
+def boreali_processing(obj,  final_path):
     wavelen = [412, 443, 469, 488,
                531, 547, 555,
                645, 667, 678]
@@ -196,7 +205,7 @@ def boreali_processing(obj, final_path):
     n = Nansat(obj)
     dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     n.reproject(dom)
-    theta = numpy.zeros([200, 300])
+    theta = numpy.zeros_like(n[2])
 
     custom_n = Nansat(domain=n)
     band_rrs_numbers = list(map(lambda x: n._get_band_number('Rrs_' + str(x)),
@@ -208,7 +217,7 @@ def boreali_processing(obj, final_path):
         custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),
                                             'units': 'sr-1',
                                             'wavelength': wavelen[index]})
-    custom_n = create_mask(custom_n, bad_val_mark=2.0)
+    custom_n = create_mask(custom_n)
     cpa = b.process(custom_n, cpa_limits, mask=custom_n['mask'], theta=theta, threads=4)
 
     custom_n.add_band(array=cpa[0], parameters={'name': 'chl', 'long_name': 'Chlorophyl-a', 'units': 'mg m-3'})
@@ -247,7 +256,7 @@ def boreali_osw_processing(obj, final_path):
     wavelen = [412, 443, 469, 488,
                531, 547, 555,
                645, 667, 678]
-    h = 50  # Средняя глубина исследуемого района
+    h = get_deph()  # Глубина исследуемого района по батиметрии
 
     cpa_limits = [0.01, 2,
                  0.01, 1,
@@ -258,9 +267,7 @@ def boreali_osw_processing(obj, final_path):
     dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     n.reproject(dom)
 
-    dep = numpy.copy(n[2])
-    dep[:, :] = numpy.float32(h)
-    theta = numpy.zeros([200, 300])
+    theta = numpy.zeros_like(n[2])
 
     custom_n = Nansat(domain=n)
     band_rrs_numbers = list(map(lambda x: n._get_band_number('Rrs_' + str(x)),
@@ -278,8 +285,8 @@ def boreali_osw_processing(obj, final_path):
                                                                     'units': 'sr-1',
                                                                     'wavelength': wavelen[index]})
 
-    custom_n = create_mask(custom_n, bad_val_mark=2.0)
-    cpa = b.process(custom_n, cpa_limits,  mask=custom_n['mask'], depth=dep, theta=theta, threads=4)
+    custom_n = create_mask(custom_n)
+    cpa = b.process(custom_n, cpa_limits,  mask=custom_n['mask'], depth=h, theta=theta, threads=4)
 
     custom_n.add_band(array=cpa[0], parameters={'name': 'chl',
                                                 'long_name': 'Chlorophyl-a',
@@ -348,7 +355,6 @@ boreali_osw_processing('/home/artemm/michigan/average_data/may/A2014135141.L2_LA
 '/home/artemm/michigan/may/')
 
 
-'''  # Сценарии
 months = ['may/', 'jun/', 'sep/', 'oct/']
 for month in months:
     path = '/nfs0/data_ocolor/michigan/data/2014/' + month
@@ -356,3 +362,4 @@ for month in months:
     for element in data:
         boreali_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_data/' + month)
         boreali_osw_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_osw_data/' + month)
+'''  # Сценарии
