@@ -10,18 +10,20 @@ import os
 from nansat import Nansat, Domain, mosaic
 import matplotlib.pyplot as plt
 import numpy
-from boreali import Boreali, lm
+from boreali import Boreali
 import scipy
 
 
-def get_deph():
-    data = Nansat('/home/artemm/Desktop/michigan_lld.grd')
+def get_deph(h_max=-1):
+
+    data = Nansat('/home/artemm/michigan/michigan_lld.grd')
     dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     data.reproject(dom)
-
     h = numpy.copy(data[1])
-    h[numpy.where(h > numpy.float32(0.0))] = numpy.nan
-    h[numpy.where(h < numpy.float32(0.0))] *= numpy.float32(-1)
+
+    if h_max == -1:
+        h[numpy.where(h > numpy.float32(0.0))] = numpy.nan
+        h[numpy.where(h < numpy.float32(0.0))] *= numpy.float32(-1)
 
     return h
 
@@ -83,17 +85,21 @@ def create_mask(obj, show='off', bad_val_mark=0.0):
         (0.0), а все остальные на флаг хороших (64.0)
         3. Новая маска добавляется в исходный объект
     :param obj: Nansat объект
-    :param ground: numpy.array содержащий значения глубин
     :param show: Флаг для отрисовки маски. По умолчанию 'off', чтобы включить show='on'
     :param bad_val_mark: Значения маркера для плихих начений. По умолчанию 0.0 ~ no_data
     :return: Nansat объект с добавленным в него бандом 'mask', где: 64.0 - хорошие значения (не равные -0.015534),
     а bad_val_mark - плохие значения (т.е. равные -0.015534)
     """
+    # Создаем бинарную маску на основе данных батиметрии
     ground = get_deph()
+    ground[numpy.where(numpy.isfinite(ground))] = numpy.float32(1)
+    ground[numpy.where(numpy.isnan(ground))] = numpy.float32(0)
+
     mask = numpy.copy(obj[2])
-    mask[numpy.where(ground == numpy.nan)] = numpy.float32(2.0)
     mask[numpy.where(mask != numpy.float32(-0.015534))] = 64.0
     mask[numpy.where(mask == numpy.float32(-0.015534))] = bad_val_mark
+    mask *= ground
+
     obj.add_band(array=mask, parameters={'name': 'mask'})
 
     print 'The new \'mask\' was successfully added to Nansat object as band: ' \
@@ -186,10 +192,15 @@ def make_average(path, final_path, period=7):
     weekly_data = group_beta(data_list, period)
     for week, week_data in weekly_data.items():
         print '\n' + 'Average data: ' + week + '\n'
-        full_name_data_list = list(map(lambda name: path + name, week_data)) # получаем список абсолютных путей к файлам
+        # получаем список абсолютных путей к файлам
+        full_name_data_list = list(map(lambda name: path + name, week_data))
         nansat_obj = Nansat(full_name_data_list[0])
         mosaic_obj = mosaic.Mosaic(domain=nansat_obj)
-        mosaic_obj.average(full_name_data_list, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11], doReproject=False, maskName='mask', threads=2)
+        mosaic_obj.average(full_name_data_list,
+                           [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                           doReproject=False,
+                           maskName='mask',
+                           threads=2)
         mosaic_obj.export(final_path + week + '.mosaic.nc')
 
 
@@ -198,8 +209,8 @@ def boreali_processing(obj,  final_path):
                531, 547, 555,
                645, 667, 678]
     cpa_limits = [0.01, 2,
-                 0.01, 1,
-                 0.01, 1, 10]
+                  0.01, 1,
+                  0.01, 1, 10]
     b = Boreali('michigan', wavelen)
 
     n = Nansat(obj)
@@ -220,22 +231,36 @@ def boreali_processing(obj,  final_path):
     custom_n = create_mask(custom_n)
     cpa = b.process(custom_n, cpa_limits, mask=custom_n['mask'], theta=theta, threads=4)
 
-    custom_n.add_band(array=cpa[0], parameters={'name': 'chl', 'long_name': 'Chlorophyl-a', 'units': 'mg m-3'})
-    custom_n.add_band(array=cpa[1], parameters={'name': 'tsm', 'long_name': 'Total suspended matter', 'units': 'g m-3'})
-    custom_n.add_band(array=cpa[2], parameters={'name': 'doc', 'long_name': 'Dissolved organic carbon', 'units': 'gC m-3'})
-    custom_n.add_band(array=cpa[3], parameters={'name': 'mse', 'long_name': 'Root Mean Square Error', 'units': 'sr-1'})
-    custom_n.add_band(array=cpa[4], parameters={'name': 'mask', 'long_name': 'L2 Boreali mask', 'units': '1'})
+    custom_n.add_band(array=cpa[0], parameters={'name': 'chl',
+                                                'long_name': 'Chlorophyl-a',
+                                                'units': 'mg m-3'})
+    custom_n.add_band(array=cpa[1], parameters={'name': 'tsm',
+                                                'long_name': 'Total suspended matter',
+                                                'units': 'g m-3'})
+    custom_n.add_band(array=cpa[2], parameters={'name': 'doc',
+                                                'long_name': 'Dissolved organic carbon',
+                                                'units': 'gC m-3'})
+    custom_n.add_band(array=cpa[3], parameters={'name': 'mse',
+                                                'long_name': 'Root Mean Square Error',
+                                                'units': 'sr-1'})
+    custom_n.add_band(array=cpa[4], parameters={'name': 'mask',
+                                                'long_name': 'L2 Boreali mask',
+                                                'units': '1'})
 
     custom_n.export(final_path + obj.split('/')[-1] + 'cpa_deep.nc')
 
-    figParams = {'legend': True, 'LEGEND_HEIGHT': 0.5, 'NAME_LOCATION_Y': 0, 'mask_array': cpa[4],
-                 'mask_lut': {1: [255, 255, 255], 2: [128, 128, 128], 4: [200, 200, 255]}}
-    custom_n.write_figure(final_path + obj.split('/')[-1] + 'chl_deep.png', 'chl', clim=[0, 1.], **figParams)
-    custom_n.write_figure(final_path + obj.split('/')[-1] + 'tsm_deep.png', 'tsm', clim=[0, 1.], **figParams)
-    custom_n.write_figure(final_path + obj.split('/')[-1] + 'doc_deep.png', 'doc', clim=[0, .2], **figParams)
-    custom_n.write_figure(final_path + obj.split('/')[-1] + 'mse_deep.png', 'mse', clim=[1e-5, 1e-2], logarithm=True, **figParams)
-    n.write_figure(final_path + obj.split('/')[-1] + 'rgb_deep.png', [16, 14, 6], clim=[[0, 0, 0],
-                                                                                            [0.006, 0.04, 0.024]],
+    fig_params = {'legend': True,
+                  'LEGEND_HEIGHT': 0.5,
+                  'NAME_LOCATION_Y': 0,
+                  'mask_array': cpa[4],
+                  'mask_lut': {1: [255, 255, 255], 2: [128, 128, 128], 4: [200, 200, 255]}}
+    custom_n.write_figure(final_path + obj.split('/')[-1] + 'chl_deep.png', 'chl', clim=[0, 1.], **fig_params)
+    custom_n.write_figure(final_path + obj.split('/')[-1] + 'tsm_deep.png', 'tsm', clim=[0, 1.], **fig_params)
+    custom_n.write_figure(final_path + obj.split('/')[-1] + 'doc_deep.png', 'doc', clim=[0, .2], **fig_params)
+    custom_n.write_figure(final_path + obj.split('/')[-1] + 'mse_deep.png', 'mse', clim=[1e-5, 1e-2], logarithm=True, **fig_params)
+    n.write_figure(final_path + obj.split('/')[-1] + 'rgb_deep.png',
+                   [16, 14, 6],
+                   clim=[[0, 0, 0], [0.006, 0.04, 0.024]],
                    mask_array=cpa[4],
                    mask_lut={2: [128, 128, 128]})
 
@@ -259,8 +284,8 @@ def boreali_osw_processing(obj, final_path):
     h = get_deph()  # Глубина исследуемого района по батиметрии
 
     cpa_limits = [0.01, 2,
-                 0.01, 1,
-                 0.01, 1, 10]
+                  0.01, 1,
+                  0.01, 1, 10]
 
     b = Boreali('michigan', wavelen)
     n = Nansat(obj)
@@ -282,8 +307,8 @@ def boreali_osw_processing(obj, final_path):
                                             'wavelength': wavelen[index]})
         # Складываем в новый объект значения Rrs
         custom_n.add_band(n[band_rrs_numbers[index]], parameters={'name': 'Rrs_' + str(wavelen[index]),
-                                                                    'units': 'sr-1',
-                                                                    'wavelength': wavelen[index]})
+                                                                  'units': 'sr-1',
+                                                                  'wavelength': wavelen[index]})
 
     custom_n = create_mask(custom_n)
     cpa = b.process(custom_n, cpa_limits,  mask=custom_n['mask'], depth=h, theta=theta, threads=4)
@@ -306,16 +331,22 @@ def boreali_osw_processing(obj, final_path):
 
     custom_n.export(final_path + obj.split('/')[-1] + 'cpa_OSW.nc')
 
-    figParams = {'legend': True, 'LEGEND_HEIGHT': 0.5, 'NAME_LOCATION_Y': 0, 'mask_array': cpa[4],
-                 'mask_lut': {1: [255, 255, 255], 2: [128, 128, 128], 4: [200, 200, 255]}}
-    custom_n.write_figure(final_path + obj.split('/')[-1] + 'chl_OSW.png', 'chl', clim=[0, 1.], **figParams)
-    custom_n.write_figure(final_path + obj.split('/')[-1] + 'tsm_OSW.png', 'tsm', clim=[0, 1.], **figParams)
-    custom_n.write_figure(final_path + obj.split('/')[-1] + 'doc_OSW.png', 'doc', clim=[0, .2], **figParams)
+    fig_params = {'legend': True,
+                  'LEGEND_HEIGHT': 0.5,
+                  'NAME_LOCATION_Y': 0,
+                  'mask_array': cpa[4],
+                  'mask_lut': {1: [255, 255, 255], 2: [128, 128, 128], 4: [200, 200, 255]}}
+    custom_n.write_figure(final_path + obj.split('/')[-1] + 'chl_OSW.png', 'chl', clim=[0, 1.], **fig_params)
+    custom_n.write_figure(final_path + obj.split('/')[-1] + 'tsm_OSW.png', 'tsm', clim=[0, 1.], **fig_params)
+    custom_n.write_figure(final_path + obj.split('/')[-1] + 'doc_OSW.png', 'doc', clim=[0, .2], **fig_params)
     custom_n.write_figure(final_path + obj.split('/')[-1] + 'mse_OSW.png', 'mse', clim=[1e-5, 1e-2],
-                          logarithm=True, **figParams)
-    n.write_figure(final_path + obj.split('/')[-1] + 'rgb_OSW.png', [16, 14, 6], clim=[[0, 0, 0], [0.006, 0.04, 0.024]],
+                          logarithm=True, **fig_params)
+    n.write_figure(final_path + obj.split('/')[-1] + 'rgb_OSW.png',
+                   [16, 14, 6],
+                   clim=[[0, 0, 0], [0.006, 0.04, 0.024]],
                    mask_array=cpa[4],
                    mask_lut={2: [128, 128, 128]})
+
 
 '''
 REPROJECT_DATA_PATH = os.path.join('/', 'home', 'artemm', 'Documents', 'michigan', 'reprojected_data', '2014/')
@@ -351,9 +382,9 @@ boreali_osw_processing('/home/artemm/michigan/average_data/oct/A2014281287.L2_LA
 
 boreali_processing('/home/artemm/michigan/average_data/may/A2014135141.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc',
 '/home/artemm/michigan/may/')
-boreali_osw_processing('/home/artemm/michigan/average_data/may/A2014135141.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc',
-'/home/artemm/michigan/may/')
 
+
+'''  # Сценарии
 
 months = ['may/', 'jun/', 'sep/', 'oct/']
 for month in months:
@@ -362,4 +393,3 @@ for month in months:
     for element in data:
         boreali_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_data/' + month)
         boreali_osw_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_osw_data/' + month)
-'''  # Сценарии
