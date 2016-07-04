@@ -348,44 +348,6 @@ def boreali_osw_processing(obj, final_path):
                    mask_lut={2: [128, 128, 128]})
 
 
-'''
-REPROJECT_DATA_PATH = os.path.join('/', 'home', 'artemm', 'Documents', 'michigan', 'reprojected_data', '2014/')
-AVERAGE_DATA_PATH = os.path.join('/', 'home', 'artemm', 'Documents', 'michigan', 'average_data', '2014/')
-BOREALI_PATH = os.path.join('/', 'home', 'artemm', 'Documents', 'michigan', 'boreali_osw_data', '2014/')
-DATA_PATH = os.path.join('/', 'home', 'artemm', 'Documents', 'michigan', 'data', '2014/')
-months = ['may/', 'jun/', 'sep/', 'oct/']
-for month in months:
-    data = get_data_list(AVERAGE_DATA_PATH + month)
-    for element in data:
-        print month + element
-        boreali_osw_processing(element, BOREALI_PATH + month)
-
-root = '/home/artemm/Documents/michigan/tests/last/'
-repr = '/home/artemm/Documents/michigan/tests/last/reproject_data/'
-aver = '/home/artemm/Documents/michigan/tests/last/average_data/'
-boreali = '/home/artemm/Documents/michigan/tests/last/boreali_data/'
-boreali_osw = '/home/artemm/Documents/michigan/tests/last/boreali_osw_data/'
-
-
-months = ['may/', 'oct/']
-for month in months:
-    data = get_data_list(root + month)
-    for element in data:
-        make_reproject(root + month, repr + month, element)
-    make_average(repr + month, aver + month)
-    #name = get_data_list(aver)
-boreali_processing('/home/artemm/michigan/average_data/oct/A2014281287.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc',
-'/home/artemm/michigan/oct/')
-boreali_osw_processing('/home/artemm/michigan/average_data/oct/A2014281287.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc',
-'/home/artemm/michigan/oct/')
-
-
-boreali_processing('/home/artemm/michigan/average_data/may/A2014135141.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc',
-'/home/artemm/michigan/may/')
-
-
-'''  # Сценарии
-
 months = ['may/', 'jun/', 'sep/', 'oct/']
 for month in months:
     path = '/nfs0/data_ocolor/michigan/data/2014/' + month
