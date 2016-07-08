@@ -281,17 +281,17 @@ def boreali_osw_processing(obj, final_path):
     wavelen = [412, 443, 469, 488,
                531, 547, 555,
                645, 667, 678]
-    h = get_deph()  # Глубина исследуемого района по батиметрии
 
     cpa_limits = [0.01, 2,
                   0.01, 1,
                   0.01, 1, 10]
 
+    h = get_deph()  # Глубина исследуемого района по батиметрии
+
     b = Boreali('michigan', wavelen)
     n = Nansat(obj)
     dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     n.reproject(dom)
-
     theta = numpy.zeros_like(n[2])
 
     custom_n = Nansat(domain=n)
@@ -347,7 +347,7 @@ def boreali_osw_processing(obj, final_path):
                    mask_array=cpa[4],
                    mask_lut={2: [128, 128, 128]})
 
-
+"""
 months = ['may/', 'jun/', 'sep/', 'oct/']
 for month in months:
     path = '/nfs0/data_ocolor/michigan/data/2014/' + month
@@ -355,3 +355,5 @@ for month in months:
     for element in data:
         boreali_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_data/' + month)
         boreali_osw_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_osw_data/' + month)
+"""
+
