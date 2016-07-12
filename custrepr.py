@@ -205,9 +205,7 @@ def make_average(path, final_path, period=7):
 
 
 def boreali_processing(obj,  final_path):
-    wavelen = [412, 443, 469, 488,
-               531, 547, 555,
-               645, 667, 678]
+    wavelen = [412, 443, 469, 488, 531, 547, 555, 645, 667, 678]
     cpa_limits = [0.01, 2,
                   0.01, 1,
                   0.01, 1, 10]
@@ -272,15 +270,7 @@ def boreali_osw_processing(obj, final_path):
     :param final_path: Путь для сохранения файлов
     :return:
     """
-    '''
-    Данные для тестирвоания
-    obj = '/home/artemm/Documents/michigan/average_data/2014/oct/A2014295301.L2_LAC_OC.x.nc.reproject.nc.mosaic.nc'
-    path = '/home/artemm/Documents/work/'
-    '''
-    print obj, final_path
-    wavelen = [412, 443, 469, 488,
-               531, 547, 555,
-               645, 667, 678]
+    wavelen = [412, 443, 469, 488, 531, 547, 555, 645, 667, 678]
 
     cpa_limits = [0.01, 2,
                   0.01, 1,
@@ -298,7 +288,6 @@ def boreali_osw_processing(obj, final_path):
     band_rrs_numbers = list(map(lambda x: n._get_band_number('Rrs_' + str(x)),
                                 wavelen))   # Получаем список номеров бандов в которых лежат значения Rrs
 
-    # osw считает по значниям Rrs ?
     # для корректной работы складываем в custom_n значения и Rrs и Rrsw
     for index in range(0, len(wavelen)):
         rrsw = n[band_rrs_numbers[index]] / (0.52 + 1.7 * n[band_rrs_numbers[index]])   # Пересчитываем Rrs в Rrsw
@@ -335,7 +324,9 @@ def boreali_osw_processing(obj, final_path):
                   'LEGEND_HEIGHT': 0.5,
                   'NAME_LOCATION_Y': 0,
                   'mask_array': cpa[4],
-                  'mask_lut': {1: [255, 255, 255], 2: [128, 128, 128], 4: [200, 200, 255]}}
+                  'mask_lut': {1: [255, 255, 255],
+                               2: [128, 128, 128],
+                               4: [200, 200, 255]}}
     custom_n.write_figure(final_path + obj.split('/')[-1] + 'chl_OSW.png', 'chl', clim=[0, 1.], **fig_params)
     custom_n.write_figure(final_path + obj.split('/')[-1] + 'tsm_OSW.png', 'tsm', clim=[0, 1.], **fig_params)
     custom_n.write_figure(final_path + obj.split('/')[-1] + 'doc_OSW.png', 'doc', clim=[0, .2], **fig_params)
