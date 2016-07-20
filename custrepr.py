@@ -347,4 +347,3 @@ for month in months:
         boreali_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_data/' + month)
         boreali_osw_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_osw_data/' + month)
 """
-
