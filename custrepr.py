@@ -16,7 +16,7 @@ import scipy
 
 def get_deph(h_max=-1):
 
-    data = Nansat('/home/artemm/michigan/michigan_lld.grd')
+    data = Nansat('/home/artemm/Documents/Work/MichiganLake/TetsData/michigan_lld.grd')
     dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     data.reproject(dom)
     h = numpy.copy(data[1])
@@ -90,6 +90,7 @@ def create_mask(obj, show='off', bad_val_mark=0.0):
     :return: Nansat объект с добавленным в него бандом 'mask', где: 64.0 - хорошие значения (не равные -0.015534),
     а bad_val_mark - плохие значения (т.е. равные -0.015534)
     """
+
     # Создаем бинарную маску на основе данных батиметрии
     ground = get_deph()
     ground[numpy.where(numpy.isfinite(ground))] = numpy.float32(1)
@@ -145,7 +146,8 @@ def group_beta(lst, n):
         else:
             result[year + str(first_day) + str(last_day) + file_type] = current
             current = []
-            current.append(image) # Добавляем снимок который не удовлетворил условию уже в следующий интервал
+            current.append(image)
+            # Добавляем снимок который не удовлетворил условию уже в следующий интервал
             # Двигаем границы временного интервала вправо
             first_day = last_day + 1
             last_day += n
@@ -215,7 +217,6 @@ def boreali_processing(obj,  final_path):
     dom = Domain('+proj=latlong +datum=WGS84 +ellps=WGS84 +no_defs', '-lle -86.3 44.6 -85.2 45.3 -ts 300 200')
     n.reproject(dom)
     theta = numpy.zeros_like(n[2])
-
     custom_n = Nansat(domain=n)
     band_rrs_numbers = list(map(lambda x: n._get_band_number('Rrs_' + str(x)),
                                 wavelen))
@@ -226,6 +227,7 @@ def boreali_processing(obj,  final_path):
         custom_n.add_band(rrsw, parameters={'name': 'Rrsw_' + str(wavelen[index]),
                                             'units': 'sr-1',
                                             'wavelength': wavelen[index]})
+
     custom_n = create_mask(custom_n)
     cpa = b.process(custom_n, cpa_limits, mask=custom_n['mask'], theta=theta, threads=4)
 
@@ -337,13 +339,3 @@ def boreali_osw_processing(obj, final_path):
                    clim=[[0, 0, 0], [0.006, 0.04, 0.024]],
                    mask_array=cpa[4],
                    mask_lut={2: [128, 128, 128]})
-
-"""
-months = ['may/', 'jun/', 'sep/', 'oct/']
-for month in months:
-    path = '/nfs0/data_ocolor/michigan/data/2014/' + month
-    data = get_data_list(path)
-    for element in data:
-        boreali_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_data/' + month)
-        boreali_osw_processing(path + element, '/nfs0/data_ocolor/michigan/tests/boreali_osw_data/' + month)
-"""
